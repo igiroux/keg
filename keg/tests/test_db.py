@@ -11,19 +11,17 @@ from keg_apps.db.app import DBApp
 from keg_apps.db2 import DB2App
 
 
-@pytest.fixture(autouse=True)
-def db_session_prep():
-    """
-        Rollback the session after every test.
-    """
-    db.session.rollback()
-
-
 class TestDB(object):
 
-    @classmethod
-    def setup_class(cls):
-        DBApp.testing_prep()
+    @pytest.fixture(scope="class", autouse=True)
+    def setup_app(self):
+        app = DBApp.testing_prep()
+        # Setup an app context that clears itself when this class's tests are finished.
+        with app.app_context():
+            yield
+
+    def teardown(self):
+        db.session.rollback()
 
     def test_primary_db_entity(self):
         assert ents.Blog.query.count() == 0
@@ -57,9 +55,16 @@ class TestDB2(object):
 
 
 class TestDatabaseManager(object):
-    @classmethod
-    def setup_class(cls):
-        DBApp.testing_prep()
+
+    @pytest.fixture(scope="class", autouse=True)
+    def setup_app(self):
+        app = DBApp.testing_prep()
+        # Setup an app context that clears itself when this class's tests are finished.
+        with app.app_context():
+            yield
+
+    def teardown(self):
+        db.session.rollback()
 
     def test_db_init_with_clear(self):
         # have to use self here to enable the inner functions to adjust an outer-context variable
